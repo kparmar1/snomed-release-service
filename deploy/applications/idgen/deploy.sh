@@ -32,6 +32,7 @@ if [ "$config_dir" != "" ]; then
 	rm -rf config
 	cp -r ../$config_dir config
 	cd config
+	tree
 	zip -r ../$aar_file *
 	cd ..
 else
