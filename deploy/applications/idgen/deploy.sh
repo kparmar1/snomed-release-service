@@ -5,7 +5,7 @@ config_dir=$1
 tmp="tmp"
 
 webapps="/var/lib/tomcat7/webapps"
-axis_url="http://apache.mirrors.timporter.net//axis/axis2/java/core/1.5.3/axis2-1.5.3-war.zip"
+axis_url="http://archive.apache.org/dist/axis/axis2/java/core/1.5.3/axis2-1.5.3-war.zip"
 axis_zip="axis2.zip"
 axis_war="axis2.war"
 
