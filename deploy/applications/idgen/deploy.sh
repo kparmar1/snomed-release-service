@@ -18,7 +18,7 @@ echo "* Checking Axis2 war is installed"
 if [ ! -f $webapps/axis2.war ]; then
 	echo "* Downloading Axis2 war"
 	wget $axis_url -O $axis_zip
-	unzip $axix_zip $axis_war
+	unzip $axis_zip $axis_war
 	mv $axis_war $webapps
 else
 	echo "* Axis2 is there"
