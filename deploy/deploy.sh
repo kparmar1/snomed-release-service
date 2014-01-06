@@ -9,17 +9,17 @@ if [ $# -eq 1 ]; then
 	app=$1
 	host=`hostname`
 
-	echo "Choosing $app config for $host"
+	echo "* Choosing $app config for $host"
 	config_dir="hosts/${host}/${app}"
 	if [ -d $config_dir ]; then
-		echo "Found host specific config for this app."
+		echo "* Found host specific config for this app."
 	else
 		config_dir="host/*/${app}"
 		if [ -d $config_dir ]; then
-			echo "Found generic host config for this app."
+			echo "* Found generic host config for this app."
 		else
 			config_dir=""
-			echo "No config overrides found for this app."
+			echo "* No config overrides found for this app."
 		fi
 	fi
 
@@ -33,7 +33,7 @@ if [ $# -eq 1 ]; then
 		cd -
 		rm -rf $tmp
 	else
-		echo "Deploy script for application '$app' not found."
+		echo "* Deploy script for application '$app' not found."
 	fi
 
 else

@@ -14,28 +14,28 @@ aar_file="idgen.aar"
 axis_services="/var/lib/tomcat7/webapps/axis2/WEB-INF/services/"
 
 
-echo "Checking Axis2 war is installed"
+echo "* Checking Axis2 war is installed"
 if [ ! -f $webapps/axis2.war ]; then
-	echo "Downloading Axis2 war"
+	echo "* Downloading Axis2 war"
 	wget $axis_url -O $axis_zip
 	unzip $axix_zip $axis_war
 	mv $axis_war $webapps
 else
-	echo "Axis2 is there"
+	echo "* Axis2 is there"
 fi
 
-echo "Downloading latest $aar_file"
+echo "* Downloading latest $aar_file"
 wget $aar_url
 
 if [ "$config_dir" != "" ]; then
-	echo "Appying config"
+	echo "* Appying config"
 	rm -rf config
 	cp -r ../$config_dir config
 	cd config
 	zip -r ../$aar_file *
 	cd ..
 else
-	echo "No config to apply"
+	echo "* No config to apply"
 fi
 
 mv $aar_file $axis_services
