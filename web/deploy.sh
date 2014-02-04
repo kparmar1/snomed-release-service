@@ -12,9 +12,17 @@ echo
 # Pull updates. (Project should be cloned over ssh using an ssh-key without a password to allow unattended git pull.)
 cd ../.source/snomed-release-system
 
+# Remove previous version files
+rm -rf api/src/main/webapp/version
+rm -rf web/version
+
 echo "Pulling updates..."
 git pull --verbose 2>&1
 echo
+
+# Add new version files
+date > api/src/main/webapp/version
+date > web/version
 
 echo "Maven build..."
 mvn clean install
