@@ -2,7 +2,7 @@
 # Stop on error
 set -e
 
-# Disable script
+## Uncomment next line to disable script
 #exit
 
 echo "Bringing snomed-release-system up to date."
@@ -12,29 +12,38 @@ echo
 # Pull updates. (Project should be cloned over ssh using an ssh-key without a password to allow unattended git pull.)
 cd ../.source/snomed-release-system
 
-# Remove previous version files
-rm -rf api/src/main/webapp/version.txt
-rm -rf web/version.txt
-
 echo "Pulling updates..."
 git pull --verbose 2>&1
 echo
 
-# Add new version files
-date > api/src/main/webapp/version.txt
-date > web/version.txt
+if ( git log -n1 | head -n1 | diff - deployed-commit.txt )
+then
+	echo 'No updates, quiting.'
+else
+	echo 'There are updates, building...'
+	echo
 
-echo "Maven build..."
-mvn clean install -DskipTests=true
-echo
+	# Add/overwrite version files
+	date > api/src/main/webapp/version.txt
+	date > web/version.txt
 
-echo "Deploy API..."
-cp api/target/api.war ../../.webapps/
-echo
+	echo "Maven build..."
+	mvn clean install -DskipTests=true
+	echo
 
-echo "Deploy Static Site..."
-rm -rf ../../snomed-release-system-web/*
-cp -r web/* ../../snomed-release-system-web/
-echo
+	echo "Deploy API..."
+	cp api/target/api.war ../../.webapps/
+	echo
 
-echo "Done"
+	echo "Deploy static site..."
+	rm -rf ../../snomed-release-system-web/*
+	cp -r web/* ../../snomed-release-system-web/
+	echo
+
+	echo "Recording deployed commit..."
+	git log -n1 | head -n1 > deployed-commit.txt
+	echo
+
+	echo "Done"
+
+fi
