@@ -25,7 +25,7 @@ date > api/src/main/webapp/version
 date > web/version
 
 echo "Maven build..."
-mvn clean install
+mvn clean install -DskipTests=true
 echo
 
 echo "Deploy API..."
