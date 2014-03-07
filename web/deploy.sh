@@ -13,16 +13,16 @@ echo
 cd ../.source/snomed-release-system
 
 # Remove previous version files
-rm -rf api/src/main/webapp/version
-rm -rf web/version
+rm -rf api/src/main/webapp/version.txt
+rm -rf web/version.txt
 
 echo "Pulling updates..."
 git pull --verbose 2>&1
 echo
 
 # Add new version files
-date > api/src/main/webapp/version
-date > web/version
+date > api/src/main/webapp/version.txt
+date > web/version.txt
 
 echo "Maven build..."
 mvn clean install -DskipTests=true
