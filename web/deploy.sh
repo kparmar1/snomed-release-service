@@ -5,12 +5,12 @@ set -e
 ## Uncomment next line to disable script
 #exit
 
-echo "Bringing snomed-release-system up to date."
+echo "Bringing snomed-release-service up to date."
 echo "Running as user `whoami`"
 echo
 
 # Pull updates. (Project should be cloned over ssh using an ssh-key without a password to allow unattended git pull.)
-cd ../.source/snomed-release-system
+cd ../.source/snomed-release-service
 
 echo "Pulling updates..."
 git pull --verbose 2>&1
@@ -36,8 +36,8 @@ else
 	echo
 
 	echo "Deploy static site..."
-	rm -rf ../../snomed-release-system-web/*
-	cp -r web/* ../../snomed-release-system-web/
+	rm -rf ../../snomed-release-service-web/*
+	cp -r web/* ../../snomed-release-service-web/
 	echo
 
 	echo "Recording deployed commit..."
