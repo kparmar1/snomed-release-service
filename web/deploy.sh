@@ -24,8 +24,8 @@ else
 	echo
 
 	# Add/overwrite version files
-	date > api/src/main/webapp/version.txt
-	date > web/version.txt
+	echo -e "`date`\n-----Latest Commit-----\n`git log -1`" > api/src/main/webapp/version.txt
+	echo -e "`date`\n-----Latest Commit-----\n`git log -1`" > web/version.txt
 
 	echo "Maven build..."
 	mvn clean install -DskipTests=true
@@ -39,6 +39,9 @@ else
 	rm -rf ../../snomed-release-service-web/*
 	cp -r web/* ../../snomed-release-service-web/
 	echo
+
+	echo "Restart Builder process"
+	sh builder/scripts/restart-builder.sh
 
 	echo "Recording deployed commit..."
 	git log -n1 | head -n1 > deployed-commit.txt
