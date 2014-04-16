@@ -1,3 +1,4 @@
+# This file is hand written. Only the first and second columns are needed.
 HI_RefSet_V1.05-Adverse_drug_reactions.txt	450990004	Adverse drug reactions reference set for GP/FP health issue (foundation metadata concept)
 HI_RefSet_V1.05-Allergies.txt	450989008	Allergies reference set for GP/FP health issue (foundation metadata concept)
 HI_RefSet_V1.05-Disorders_and_diseases.txt	450985002	Disorders and diseases reference set for GP/FP health issue (foundation metadata concept)
