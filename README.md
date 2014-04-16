@@ -9,7 +9,7 @@ On a ubuntu/debian/osx command line:
 ```sh
 cd example-refset
 sh ../1-process.sh
-sh ../2-post-test
+sh ../2-post-test.sh
 ```
 
 See the output files under the 'target' directory. 'der2_Refset_SimpleFull_INT_20140131.txt' is the combined file.
