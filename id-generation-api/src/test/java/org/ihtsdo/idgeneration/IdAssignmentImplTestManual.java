@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-public class IdAssignmentImplTest {
+public class IdAssignmentImplTestManual {
 
 	@Test
 	public void testApi() throws Exception {
