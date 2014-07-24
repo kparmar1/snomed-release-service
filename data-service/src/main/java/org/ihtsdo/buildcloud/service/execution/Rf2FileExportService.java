@@ -7,17 +7,16 @@ import org.ihtsdo.buildcloud.dao.io.AsyncPipedStreamBean;
 import org.ihtsdo.buildcloud.entity.Execution;
 import org.ihtsdo.buildcloud.entity.Package;
 import org.ihtsdo.buildcloud.entity.Product;
-import org.ihtsdo.buildcloud.service.execution.database.RF2TableDAO;
-import org.ihtsdo.buildcloud.service.execution.database.RF2TableDAOHsqlImpl;
-import org.ihtsdo.buildcloud.service.execution.database.Rf2FileWriter;
+import org.ihtsdo.buildcloud.service.execution.database.*;
+import org.ihtsdo.buildcloud.service.execution.database.hsql.RF2TableDAOHsqlImpl;
 import org.ihtsdo.buildcloud.service.file.ArchiveEntry;
+import org.ihtsdo.buildcloud.service.helper.StatTimer;
 import org.ihtsdo.snomed.util.rf2.schema.TableSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,6 +76,7 @@ public class Rf2FileExportService {
 	}
 
 	private void generateReleaseFile(String transformedDeltaDataFile, boolean firstTimeRelease) {
+		StatTimer timer = new StatTimer(getClass());
 		RF2TableDAO rf2TableDAO = null;
 		TableSchema tableSchema = null;
 		try {
@@ -85,20 +85,29 @@ public class Rf2FileExportService {
 					pkg.getBusinessKey(), transformedDeltaDataFile);
 
 			rf2TableDAO = new RF2TableDAOHsqlImpl(pkg.getBusinessKey());
+			timer.split();
 			tableSchema = rf2TableDAO.createTable(transformedDeltaDataFile, transformedDeltaInputStream);
+			timer.setTargetEntity(tableSchema.getTableName());
+			timer.logTimeTaken("Create table");
 
 			// Export ordered Delta file
 			Rf2FileWriter rf2FileWriter = new Rf2FileWriter();
 			AsyncPipedStreamBean deltaFileAsyncPipe = executionDao
 					.getOutputFileOutputStream(execution, pkg.getBusinessKey(), transformedDeltaDataFile);
 
-			ResultSet deltaResultSet;
+			RF2TableResults deltaResultSet;
+			timer.split();
 			if (firstTimeRelease) {
 				deltaResultSet = rf2TableDAO.selectNone(tableSchema);
+				timer.logTimeTaken("Select none");
 			} else {
 				deltaResultSet = rf2TableDAO.selectAllOrdered(tableSchema);
+				timer.logTimeTaken("Select all ordered");
 			}
+
+			timer.split();
 			rf2FileWriter.exportDelta(deltaResultSet, tableSchema, deltaFileAsyncPipe.getOutputStream());
+			timer.logTimeTaken("Export delta processing");
 			deltaFileAsyncPipe.waitForFinish();
 
 			String currentFullFileName = transformedDeltaDataFile.replace(RF2Constants.DELTA, RF2Constants.FULL);
@@ -115,7 +124,9 @@ public class Rf2FileExportService {
 
 				// Append transformed previous full file
 				LOGGER.debug("Start: Insert previous release data into {}", tableSchema.getTableName());
+				timer.split();
 				rf2TableDAO.appendData(tableSchema, previousFullFile.getInputStream());
+				timer.logTimeTaken("Insert previous release data");
 				LOGGER.debug("Finish: Insert previous release data into {}", tableSchema.getTableName());
 			}
 
@@ -126,7 +137,9 @@ public class Rf2FileExportService {
 			AsyncPipedStreamBean snapshotAsyncPipe = executionDao
 					.getOutputFileOutputStream(execution, pkg.getBusinessKey(), snapshotOutputFilePath);
 
-			ResultSet fullResultSet = rf2TableDAO.selectAllOrdered(tableSchema);
+			timer.split();
+			RF2TableResults fullResultSet = rf2TableDAO.selectAllOrdered(tableSchema);
+			timer.logTimeTaken("selectAllOrdered");
 
 			rf2FileWriter.exportFullAndSnapshot(fullResultSet, tableSchema,
 					pkg.getBuild().getEffectiveTime(), fullFileAsyncPipe.getOutputStream(),

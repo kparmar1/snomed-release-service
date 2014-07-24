@@ -1,4 +1,4 @@
-package org.ihtsdo.buildcloud.service.execution.database;
+package org.ihtsdo.buildcloud.service.execution.database.hsql;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
