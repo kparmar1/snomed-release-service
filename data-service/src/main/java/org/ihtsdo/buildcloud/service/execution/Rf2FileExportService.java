@@ -20,6 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Rf2FileExportService {
 
@@ -28,42 +32,76 @@ public class Rf2FileExportService {
 	private final Product product;
 	private final ExecutionDAO executionDao;
 	private final int maxRetries;
+	private final ExecutorService executorService;
+	private final boolean multiThreadedExport;
 	private static final Logger LOGGER = LoggerFactory.getLogger(Rf2FileExportService.class);
 
-	public Rf2FileExportService(final Execution execution, final Package pkg, ExecutionDAO dao, int maxRetries) {
+	public Rf2FileExportService(final Execution execution, final Package pkg, ExecutionDAO dao, int maxRetries, boolean multiThreadedExport) {
 		this.execution = execution;
 		this.pkg = pkg;
 		product = pkg.getBuild().getProduct();
 		executionDao = dao;
 		this.maxRetries = maxRetries;
+		this.multiThreadedExport = multiThreadedExport;
+		executorService = Executors.newCachedThreadPool();
 	}
 
-	public final void generateReleaseFiles() {
-		boolean firstTimeRelease = pkg.isFirstTimeRelease();
+	public final void generateReleaseFiles() throws ExecutionException {
+		final boolean firstTimeRelease = pkg.isFirstTimeRelease();
 		List<String> transformedFiles = getTransformedDeltaFiles();
 
-		for (String thisFile : transformedFiles) {
-			int failureCount = 0;
-			boolean success = false;
-			do {
-				try {
-					generateReleaseFile(thisFile, firstTimeRelease);
-					success = true;
-				} catch (ReleaseFileGenerationException e) {
-					failureCount++;
-					// Is this an error that it's worth retrying eg root cause IOException or AWS Related?
-					Throwable cause = e.getCause();
-					if (failureCount > maxRetries) {
-						throw new ReleaseFileGenerationException("Maximum failure recount of " + maxRetries + " exceeeded. Last error: "
-								+ e.getMessage(), e);
-					} else if (!isNetworkRelated(cause)) {
-						// If this isn't something we think we might recover from by retrying, then just re-throw the existing error without
-						// modification
-						throw e;
-					} else {
-						LOGGER.warn("Failure while processing {} due to: {}. Retrying ({})...", thisFile, e.getMessage(), failureCount);
-					}				}
-			} while (!success);
+		List<Future> concurrentTasks = new ArrayList<>();
+		for (final String thisFile : transformedFiles) {
+			Future<?> task = executorService.submit(new Runnable() {
+
+				@Override
+				public void run() {
+					int failureCount = 0;
+					boolean success = false;
+					do {
+						try {
+							generateReleaseFile(thisFile, firstTimeRelease);
+							success = true;
+						} catch (ReleaseFileGenerationException e) {
+							failureCount++;
+							// Is this an error that it's worth retrying eg root cause IOException or AWS Related?
+							Throwable cause = e.getCause();
+							if (failureCount > maxRetries) {
+								throw new ReleaseFileGenerationException("Maximum failure recount of " + maxRetries + " exceeeded. Last error: "
+										+ e.getMessage(), e);
+							} else if (!isNetworkRelated(cause)) {
+								// If this isn't something we think we might recover from by retrying, then just re-throw the existing error without
+								// modification
+								throw e;
+							} else {
+								LOGGER.warn("Failure while processing {} due to: {}. Retrying ({})...", thisFile, e.getMessage(), failureCount);
+							}
+						}
+					} while (!success);
+				}
+
+			});
+
+			if (multiThreadedExport) {
+				concurrentTasks.add(task);
+			} else {
+				waitForTaskToFinish(task);
+			}
+
+		}
+
+		// Wait for any concurrent tasks to finish
+		for (Future concurrentTask : concurrentTasks) {
+			waitForTaskToFinish(concurrentTask);
+		}
+
+	}
+
+	private void waitForTaskToFinish(Future concurrentTask) throws ExecutionException {
+		try {
+			concurrentTask.get();
+		} catch (InterruptedException e) {
+			LOGGER.error("Thread interrupted while waiting for future result.", e);
 		}
 	}
 

@@ -26,6 +26,12 @@
 
 	<bean id="configurer2" class="org.ihtsdo.context.OrderedPropertyPlaceholderConfigurer">
 		<property name="location" value="+{dataServicePropertiesPath}" />
+		<property name="properties">
+			<props>
+				<!-- Property defaults -->
+				<prop key="fileProcessing.multiThreadedExport">true</prop>
+			</props>
+		</property>
 	</bean>
 
 	<bean class="org.ihtsdo.buildcloud.dao.ReleaseCenterDAOImpl"/>
@@ -118,9 +124,13 @@
 	<bean class="java.lang.String" id="publishedBucketName">
 		<constructor-arg value="ire.published.release.ihtsdo" />
 	</bean>
-	
+
 	<bean class="java.lang.Integer" id="fileProcessingFailureMaxRetry">
 		<constructor-arg value="${fileProcessing.failureMaxRetry}"/>
+	</bean>
+
+	<bean class="java.lang.Boolean" id="multiThreadedExport">
+		<constructor-arg value="${fileProcessing.multiThreadedExport}"/>
 	</bean>
 
 	<bean factory-bean="objectMapperFactory" factory-method="createObjectMapper"/>

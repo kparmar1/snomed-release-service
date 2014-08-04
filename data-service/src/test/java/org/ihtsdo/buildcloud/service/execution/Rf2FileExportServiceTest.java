@@ -77,8 +77,9 @@ public class Rf2FileExportServiceTest {
 		}};
 
 		int maxRetries = 0;
+		boolean sortFilesInParallel = true;
 		for (Package pkg : packages) {
-			Rf2FileExportService generator = new Rf2FileExportService(execution, pkg, dao, maxRetries);
+			Rf2FileExportService generator = new Rf2FileExportService(execution, pkg, dao, maxRetries, sortFilesInParallel);
 			generator.generateReleaseFiles();
 		}
 
@@ -146,8 +147,9 @@ public class Rf2FileExportServiceTest {
 		}};
 
 		int maxRetries = 0;
+		boolean sortFilesInParallel = true;
 		for (Package pkg : packages) {
-			Rf2FileExportService generator = new Rf2FileExportService(execution, pkg, dao, maxRetries);
+			Rf2FileExportService generator = new Rf2FileExportService(execution, pkg, dao, maxRetries, sortFilesInParallel);
 			generator.generateReleaseFiles();
 		}
 

@@ -75,6 +75,9 @@ public class ExecutionServiceImpl implements ExecutionService {
 	
 	@Autowired
 	private Integer fileProcessingFailureMaxRetry;
+
+	@Autowired
+	private Boolean multiThreadedExport;
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExecutionServiceImpl.class);
 
@@ -242,7 +245,7 @@ public class ExecutionServiceImpl implements ExecutionService {
 			transformationService.transformFiles(execution, pkg, inputFileSchemaMap);
 
 			//Convert Delta files to Full, Snapshot and delta release files
-			Rf2FileExportService generator = new Rf2FileExportService(execution, pkg, dao, fileProcessingFailureMaxRetry);
+			Rf2FileExportService generator = new Rf2FileExportService(execution, pkg, dao, fileProcessingFailureMaxRetry, multiThreadedExport);
 			generator.generateReleaseFiles();
 		}
 
