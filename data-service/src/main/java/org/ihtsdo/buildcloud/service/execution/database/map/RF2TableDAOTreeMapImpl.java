@@ -73,7 +73,7 @@ public class RF2TableDAOTreeMapImpl implements RF2TableDAO {
 	}
 
 	@Override
-	public RF2TableResults selectNone(TableSchema tableSchema) throws SQLException {
+	public RF2TableResults selectNone(TableSchema tableSchema) {
 		return new RF2TableResultsMapImpl(new TreeMap<Key, String>());
 	}
 

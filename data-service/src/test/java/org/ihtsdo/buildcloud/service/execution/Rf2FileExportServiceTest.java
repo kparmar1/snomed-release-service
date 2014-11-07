@@ -42,7 +42,7 @@ public class Rf2FileExportServiceTest {
 	private static final String EXPECTED_ATTRIBUT_VALUE_DELTA_FILE = "der2_cRefset_AttributeValueDelta_INT_20140731.txt";
 	private static final String EXPECTED_ATTRIBUT_VALUE_SNAPSHOT_FILE = "der2_cRefset_AttributeValueSnapshot_INT_20140731.txt";
 	private static final String EXPECTED_ATTRIBUT_VALUE_FULL_FILE = "der2_cRefset_AttributeValueFull_INT_20140731.txt";
-	
+
 	private Package pkg;
 	@Autowired
 	private ExecutionDAO dao;
@@ -114,11 +114,6 @@ public class Rf2FileExportServiceTest {
 		StreamTestUtils.assertStreamsEqualLineByLine(getExpectedFileInputStreamFromResource(EXPECTED_ATTRIBUT_VALUE_FULL_FILE), dao.getOutputFileInputStream(execution, pkg, EXPECTED_ATTRIBUT_VALUE_FULL_FILE));
 	}
 
-	@Test
-	public void testExportFullAndDeltaFromSnapshotAndPrevFull() {
-
-	}
-
 	private InputStream getExpectedFileInputStreamFromResource(String fileName) throws FileNotFoundException {
 		String filePath = getClass().getResource("/org/ihtsdo/buildcloud/service/execution/export/expected/" + fileName).getFile();
 		return new FileInputStream(filePath);
@@ -126,14 +121,13 @@ public class Rf2FileExportServiceTest {
 
 	private File getFileByName(String fileName) {
 		return new File(getClass().getResource("/org/ihtsdo/buildcloud/service/execution/export/" + fileName).getFile());
-
 	}
 	
 	@After
-	public void tearDown() throws InterruptedException
-	{
+	public void tearDown() throws InterruptedException {
 		uuidGenerator.reset();
 		//delay as it might use the same execution.
 		Thread.sleep(1000);
 	}
+
 }

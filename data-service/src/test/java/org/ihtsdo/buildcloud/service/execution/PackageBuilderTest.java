@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.List;
 import java.util.Map;
 
 public class PackageBuilderTest {
@@ -32,12 +33,12 @@ public class PackageBuilderTest {
 		//We're expecting to be missing about 89 files during testing, so suppress those warnings
 		pb.warnOnMissingFiles(false);
 		File zipFile = pb.process();
-		
-		int itemsInTargetDirectory = TestUtils.itemCount(new File(targetPath));
-		Assert.assertEquals("Expecting 49 directories + 1 file = 50 items in target directory", 50, itemsInTargetDirectory);
+
+		List<String> itemsInTargetDirectory = TestUtils.itemList(new File(targetPath));
+		Assert.assertEquals("Expecting 49 directories + 1 file = 50 items in target directory. Found " + itemsInTargetDirectory, 53, itemsInTargetDirectory.size());
 		
 		Map<String, String> zipContents = FileUtils.examineZipContents(zipFile.getName(), new FileInputStream(zipFile));
-		Assert.assertEquals("Expecting 49 directories + 1 file = 50 items in zipped file", 50, zipContents.size());
+		Assert.assertEquals("Expecting 49 directories + 1 file = 50 items in zipped file", 53, zipContents.size());
 		
 		//And lets make sure our test file is in there.
 		Assert.assertTrue(zipContents.containsValue(FilenameUtils.separatorsToSystem("/SnomedCT_Release_INT_20140131/RF2Release/Full/Refset/Metadata/der2_ciRefset_DescriptionTypeFull_INT_20140131.txt")));

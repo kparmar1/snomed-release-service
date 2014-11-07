@@ -216,7 +216,12 @@ public class Rf2FileExportService {
 
 		// Export delta
 		Rf2FileWriter rf2FileWriter = new Rf2FileWriter();
-		RF2TableResults results = rf2TableDAO.selectWithEffectiveDateOrdered(tableSchema, effectiveTime);
+		RF2TableResults results;
+		if (firstTimeRelease) {
+			results = rf2TableDAO.selectNone(tableSchema);
+		} else {
+			results = rf2TableDAO.selectWithEffectiveDateOrdered(tableSchema, effectiveTime);
+		}
 		try (AsyncPipedStreamBean deltaOutputStream = executionDao.getOutputFileOutputStream(execution, pkg.getBusinessKey(), deltaFilename)) {
 			rf2FileWriter.exportDelta(results, tableSchema, deltaOutputStream.getOutputStream());
 		} catch (IOException | SQLException e) {

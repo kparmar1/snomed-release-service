@@ -21,8 +21,11 @@ import org.springframework.util.StreamUtils;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RF2ClassifierService {
 
@@ -100,7 +103,12 @@ public class RF2ClassifierService {
 
 				uploadLog(execution, packageBusinessKey, equivalencyReportOutputFile, RF2Constants.EQUIVALENCY_REPORT_TXT);
 
-				// Upload inferred relationships file with null ids
+				// Reconcile SCTIDs against previous published snapshot
+				if (!pkg.isFirstTimeRelease()) {
+					inferredRelationshipsOutputFile = reconcileIdsAndDatesAgainstPreviousSnapshot(inferredRelationshipsOutputFile, pkg);
+				}
+
+				// Upload inferred relationships file with some null ids
 				executionDAO.putTransformedFile(execution, pkg, inferredRelationshipsOutputFile);
 
 				// Generate inferred relationship ids using transform
@@ -115,6 +123,88 @@ public class RF2ClassifierService {
 			logger.info("Stated relationship and concept files not present. Skipping classification.");
 		}
 		return null;
+	}
+
+	private File reconcileIdsAndDatesAgainstPreviousSnapshot(File inferredRelationshipsOutputFile, Package pkg) throws IOException, ProcessingException {
+		String inferredRelationshipsOutputFileName = inferredRelationshipsOutputFile.getName();
+		// sourceId + destinationId + typeId + relationshipGroup
+		// 5 6 7 8
+		Pattern relationshipCompositeKeyPattern = Pattern.compile("[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t).*");
+
+		// Build current file table
+		Map<String, String> table = new HashMap<>();
+		String headerLine;
+		try (BufferedReader reader = new BufferedReader(new FileReader(inferredRelationshipsOutputFile))) {
+			String line, key;
+			Matcher matcher;
+			headerLine = reader.readLine();
+			long lineNumber = 1;
+			while ((line = reader.readLine()) != null) {
+				lineNumber++;
+				matcher = relationshipCompositeKeyPattern.matcher(line);
+				if (matcher.matches()) {
+					key = matcher.group(1);
+					table.put(key, line);
+				} else {
+//					null	20140731	1	900000000000012004	800010001	399748001	0	116680003	900000000000011006	900000000000451002
+					throw new ProcessingException("Line " + lineNumber + " of inferred relationship file does not match expected pattern: " + line);
+				}
+			}
+		}
+
+		// Read previous file, when a match is found correct id and date
+		String previousPublishedPackage = pkg.getPreviousPublishedPackage();
+		InputStream publishedFileArchiveEntry = executionDAO.getPublishedFileArchiveEntry(pkg.getBuild().getProduct(), inferredRelationshipsOutputFileName, previousPublishedPackage);
+		if (publishedFileArchiveEntry != null) {
+			String effectiveTimeSnomedFormat = pkg.getBuild().getEffectiveTimeSnomedFormat();
+			try (BufferedReader previousFileReader = new BufferedReader(new InputStreamReader(publishedFileArchiveEntry))) {
+				String prevLine, key, currentFileLine;
+				Matcher matcher;
+				previousFileReader.readLine();
+				long lineNumber = 1;
+				while ((prevLine = previousFileReader.readLine()) != null) {
+					lineNumber++;
+					matcher = relationshipCompositeKeyPattern.matcher(prevLine);
+					if (matcher.matches()) {
+						key = matcher.group(1);
+						currentFileLine = table.get(key);
+						if (currentFileLine != null) {
+							String[] prevLineSplit = prevLine.split("\t", 3);
+							String[] currentFileLineSplit = currentFileLine.split("\t", 3);
+
+							String id = prevLineSplit[0];
+							// Replace id
+							currentFileLineSplit[0] = prevLineSplit[0];
+
+							// Does whole line match (minus first two fields)?
+							if (currentFileLineSplit[2].equals(prevLineSplit[2])) {
+								// Replace date
+								currentFileLineSplit[1] = prevLineSplit[1];
+							}
+
+							table.put(key, currentFileLineSplit[0] + "\t" + currentFileLineSplit[1] + "\t" + currentFileLineSplit[2]);
+						}
+					} else {
+						throw new ProcessingException("Line " + lineNumber + " of previous inferred relationship file does not match expected pattern.");
+					}
+				}
+			}
+		} else {
+			throw new ProcessingException("Previous published file not found for " + inferredRelationshipsOutputFileName + " in previous published package " + previousPublishedPackage);
+		}
+
+		// Export current file with new ids
+		File tempDir = Files.createTempDir();
+		File outputFile = new File(tempDir, inferredRelationshipsOutputFileName);
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+			writer.write(headerLine);
+			writer.write(RF2Constants.LINE_ENDING);
+			for (String line : table.values()) {
+				writer.write(line);
+				writer.write(RF2Constants.LINE_ENDING);
+			}
+		}
+		return outputFile;
 	}
 
 	public boolean checkNoStatedRelationshipCycles(Execution execution, String packageBusinessKey, List<String> localConceptFilePaths,
