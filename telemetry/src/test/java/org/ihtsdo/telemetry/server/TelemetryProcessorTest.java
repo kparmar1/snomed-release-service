@@ -3,9 +3,6 @@ package org.ihtsdo.telemetry.server;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
-import mockit.Mocked;
-import mockit.NonStrictExpectations;
-import mockit.integration.junit4.JMockit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.helpers.LogLog;
 import org.easymock.Capture;
@@ -13,41 +10,48 @@ import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.easymock.MockType;
 import org.easymock.internal.MocksControl;
-import org.ihtsdo.commons.email.EmailRequest;
-import org.ihtsdo.commons.email.EmailSender;
 import org.ihtsdo.telemetry.TestService;
-import org.ihtsdo.telemetry.core.Constants;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.UUID;
+import javax.jms.JMSException;
 
-@RunWith(JMockit.class)
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations={"/test_telemetry_server_application_context.xml"})
+@Transactional
 public class TelemetryProcessorTest {
 
-	private TestBroker testBroker;
-	private TelemetryProcessor telemetryProcessor;
-	private MocksControl mocksControl;
-	private StreamFactory streamFactory;
+	private static TestBroker testBroker;
+
+	@Autowired
 	private TransferManager mockTransferManager;
+
+	private MocksControl mocksControl;
 	private Upload mockUpload;
+
 	private File testStreamFile;
+	private String streamFileName;
+	private String streamFileDestination;
+	private String streamS3Destination;
 
-	private static String streamFileName;
-	private static String streamFileDestination;
-	private static String streamS3Destination;
+	private TestProcessor testProcessor;
 
-	@Mocked
-	EmailSender emailSender;
+	@BeforeClass
+	public static void setupBroker() throws JMSException {
+		TelemetryProcessorTest.testBroker = new TestBroker();
+	}
 
 	@Before
 	public void setUp() throws Exception {
@@ -59,35 +63,17 @@ public class TelemetryProcessorTest {
 		streamFileDestination = "file:///tmp/" + streamFileName;
 		streamS3Destination = "s3://local.build.bucket/test_telemetry_stream_" + uniqueSuffix + ".txt";
 
-		testBroker = new TestBroker();
-
 		mocksControl = new MocksControl(MockType.DEFAULT);
-		mockTransferManager = mocksControl.createMock(TransferManager.class);
 		mockUpload = mocksControl.createMock(Upload.class);
 
-		// Set system property to override log4j appender default broker url
-		System.setProperty(Constants.SYS_PROP_BROKER_URL, "vm://localhost?create=false");
-
-		streamFactory = new StreamFactory(mockTransferManager, false);
-
-		new NonStrictExpectations() {
-			{
-				emailSender.send((EmailRequest) any);
-			}
-		};
-
-		telemetryProcessor = new TelemetryProcessor(streamFactory, "foo@bar.com", null, emailSender);
-		telemetryProcessor.startup();
 		testStreamFile = new File("/tmp/" + streamFileName);
 		testStreamFile.delete();
+
+		testProcessor = new TestProcessor();
 	}
 
 	@Test
 	public void testErrorDetection() throws IOException, InterruptedException {
-
-		// Make sure previous test has had time to finish
-		// Thread.sleep(1000);
-
 		Logger logger = LoggerFactory.getLogger(TestService.class);
 
 		try {
@@ -95,12 +81,11 @@ public class TelemetryProcessorTest {
 		} catch (Exception e) {
 			logger.error("Correctly detected thrown exception.", e);
 		}
-		// Thread.sleep(100000); // Needed if you're going to breakpoint in the server code.
 	}
 
 	@Test
 	public void testAggregateEventsToFile() throws IOException, InterruptedException {
-		TestProcessor.doProcessing(TelemetryProcessorTest.streamFileDestination);
+		testProcessor.doProcessing(streamFileDestination);
 		// Wait for the aggregator to finish.
 		Thread.sleep(1000);
 
@@ -136,21 +121,25 @@ public class TelemetryProcessorTest {
 				return null;
 			}
 		});
+
+		EasyMock.reset();
 		mocksControl.replay();
+		EasyMock.replay(mockTransferManager); // This mock not part of the mocksControl
 
 		// Perform test scenario
-		TestProcessor.doProcessing(TelemetryProcessorTest.streamS3Destination);
+		testProcessor.doProcessing(streamS3Destination);
 		// Wait for the aggregator to finish.
 		Thread.sleep(1000);
 
 		// Assert mock expectations
 		mocksControl.verify();
+		EasyMock.verify(mockTransferManager);
 		Assert.assertTrue(fileAssertionsRan.b);
 	}
 
 	@Test
 	public void testAggregateEventsToFileWithException() throws IOException, InterruptedException {
-		TestProcessor.doProcessingWithException(TelemetryProcessorTest.streamFileDestination);
+		testProcessor.doProcessingWithException(streamFileDestination);
 		// Wait for the aggregator to finish.
 		Thread.sleep(1000);
 
@@ -186,7 +175,10 @@ public class TelemetryProcessorTest {
 	@After
 	public void tearDown() throws Exception {
 		testStreamFile.delete();
-		telemetryProcessor.shutdown();
+	}
+
+	@AfterClass
+	public static void tearDownBroker() throws JMSException {
 		testBroker.close();
 	}
 

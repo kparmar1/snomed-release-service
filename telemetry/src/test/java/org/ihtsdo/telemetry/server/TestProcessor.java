@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 class TestProcessor {
 
-	public static void doProcessing(String streamDestination) {
+	public void doProcessing(String streamDestination) {
 		Logger logger = LoggerFactory.getLogger(TestService.class);
 
 		logger.info("Before stream started");
@@ -23,7 +23,7 @@ class TestProcessor {
 		logger.info("After stream ended");
 	}
 
-	public static void doProcessingWithException(String streamDestination) {
+	public void doProcessingWithException(String streamDestination) {
 		Logger logger = LoggerFactory.getLogger(TestService.class);
 
 		logger.info("Before stream started");

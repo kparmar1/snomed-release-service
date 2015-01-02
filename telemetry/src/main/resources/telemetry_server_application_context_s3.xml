@@ -2,12 +2,13 @@
 	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
 	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-	<bean class="java.lang.Integer" id="transformBufferSize">
-		<constructor-arg value="${transformBufferSize}"/>
+	<bean class="com.amazonaws.auth.BasicAWSCredentials" id="awsCredentials" depends-on="configurer2">
+		<constructor-arg value="${aws.key}" />
+		<constructor-arg value="${aws.privateKey}" />
 	</bean>
 
-	<import resource="telemetry_server_application_context_s3.xml"/>
-	<import resource="telemetry_server_application_context_connections.xml"/>
-	<import resource="telemetry_server_application_context_main.xml"/>
+	<bean class="com.amazonaws.services.s3.transfer.TransferManager">
+		<constructor-arg ref="awsCredentials"/>
+	</bean>
 
 </beans>

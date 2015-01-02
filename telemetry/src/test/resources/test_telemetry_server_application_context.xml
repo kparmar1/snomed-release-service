@@ -2,12 +2,24 @@
 	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
 	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-	<bean class="java.lang.Integer" id="transformBufferSize">
-		<constructor-arg value="${transformBufferSize}"/>
+	<bean id="connectionFactory" class="org.apache.activemq.pool.PooledConnectionFactory">
+		<constructor-arg value="vm://localhost?create=false" />
 	</bean>
 
-	<import resource="telemetry_server_application_context_s3.xml"/>
-	<import resource="telemetry_server_application_context_connections.xml"/>
+	<bean id="transferManager" class="org.easymock.EasyMock" factory-method="createMock">
+		<constructor-arg value="com.amazonaws.services.s3.transfer.TransferManager" />
+	</bean>
+
+	<bean id="offlineMode" class="java.lang.Boolean" >
+		<constructor-arg value="false"/>
+	</bean>
+
+	<bean class="java.lang.Integer" id="transformBufferSize">
+		<constructor-arg value="10"/>
+	</bean>
+
+	<util:list id="eventDestinations"/>
+
 	<import resource="telemetry_server_application_context_main.xml"/>
 
 </beans>
