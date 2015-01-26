@@ -1,10 +1,10 @@
-package org.ihtsdo.buildcloud.controller.helper;
+package org.ihtsdo.buildcloud.integration.helper;
 
 import com.jayway.jsonpath.JsonPath;
 import org.apache.commons.codec.binary.Base64;
-import org.ihtsdo.buildcloud.controller.AbstractControllerTest;
 import org.ihtsdo.buildcloud.entity.Build;
 import org.ihtsdo.buildcloud.entity.helper.EntityHelper;
+import org.ihtsdo.buildcloud.integration.AbstractControllerTest;
 import org.ihtsdo.buildcloud.service.ProductService;
 import org.ihtsdo.buildcloud.test.StreamTestUtils;
 import org.json.JSONArray;
@@ -256,11 +256,45 @@ public class IntegrationTestHelper {
 		final JSONObject jsonObject = new JSONObject(outputFileListJson);
 		String status = jsonObject.getString("status");
 		Assert.assertEquals("Unexpected build status.", Build.Status.QUEUED.toString(), status);
+	}
 
-//		final JSONObject buildReport = jsonObject.getJSONObject("buildReport");
-//		final String progressStatus = buildReport.getString("Progress Status");
-//		final String message = buildReport.getString("Message");
-//		Assert.assertEquals("Build bad status. Message: " + message, COMPLETION_STATUS, progressStatus);
+	public void waitForBuildToComplete(String buildURL) throws Exception {
+		int maxWaitSeconds = 10;
+		int tries = 0;
+		boolean buildComplete = false;
+		String buildStatus = null;
+		JSONObject buildJson = null;
+		while (!buildComplete && maxWaitSeconds > tries) {
+			if (tries > 0) {
+				Thread.sleep(1000);
+			}
+			buildJson = getBuildJson(buildURL);
+			buildStatus = buildJson.getString("status");
+			buildComplete = buildStatus.equals(Build.Status.BUILT.toString());
+			tries++;
+		}
+		if (buildComplete) {
+			final JSONObject buildReport = buildJson.getJSONObject("buildReport");
+			final String progressStatus = buildReport.getString("Progress Status");
+			final String message = buildReport.getString("Message");
+			Assert.assertEquals("Build bad status. Message: " + message, COMPLETION_STATUS, progressStatus);
+		} else {
+			Assert.fail("Gave up waiting for build status change. Status is now " + buildStatus);
+		}
+	}
+
+	private JSONObject getBuildJson(String buildURL) throws Exception {
+		final MvcResult triggerResult = mockMvc.perform(
+				post(buildURL)
+						.header("Authorization", getBasicDigestHeaderValue())
+						.contentType(MediaType.APPLICATION_JSON)
+		)
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(AbstractControllerTest.APPLICATION_JSON_UTF8))
+				.andReturn();
+
+		final String outputFileListJson = triggerResult.getResponse().getContentAsString();
+		return new JSONObject(outputFileListJson);
 	}
 
 	public void publishOutput(final String buildURL) throws Exception {
@@ -391,5 +425,6 @@ public class IntegrationTestHelper {
 	public String getProductUrl() {
 		return CENTER_URL + "/products/" + productId;
 	}
+
 
 }

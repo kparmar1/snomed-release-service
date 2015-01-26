@@ -130,7 +130,7 @@
 	<bean class="java.lang.String" id="buildBucketName">
 		<constructor-arg value="${buildBucketName}" />
 	</bean>
-	
+
 	<bean class="java.lang.String" id="publishedBucketName">
 		<constructor-arg value="${publishedBucketName}" />
 	</bean>

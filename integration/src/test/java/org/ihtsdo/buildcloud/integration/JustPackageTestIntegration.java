@@ -1,11 +1,14 @@
-package org.ihtsdo.buildcloud.controller;
+package org.ihtsdo.buildcloud.integration;
 
-import org.ihtsdo.buildcloud.controller.helper.IntegrationTestHelper;
 import org.ihtsdo.otf.dao.s3.S3Client;
 import org.ihtsdo.otf.dao.s3.TestS3Client;
+import org.ihtsdo.buildcloud.integration.helper.IntegrationTestHelper;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.xml.XmlReaderContext;
+
+import javax.servlet.ServletContext;
 
 public class JustPackageTestIntegration extends AbstractControllerTest {
 
@@ -18,8 +21,9 @@ public class JustPackageTestIntegration extends AbstractControllerTest {
 	@Before
 	public void setup() throws Exception {
 		super.setup();
-		integrationTestHelper = new IntegrationTestHelper(mockMvc,"just_package_test");
+		integrationTestHelper = new IntegrationTestHelper(mockMvc, "just_package_test");
 		((TestS3Client) s3Client).freshBucketStore();
+		System.out.println(ServletContext.class);
 	}
 
 	@Test
@@ -35,6 +39,7 @@ public class JustPackageTestIntegration extends AbstractControllerTest {
 		integrationTestHelper.setReadmeHeader("Header");
 		String buildURL1 = integrationTestHelper.createBuild();
 		integrationTestHelper.triggerBuild(buildURL1);
+		integrationTestHelper.waitForBuildToComplete(buildURL1);
 
 		integrationTestHelper.publishOutput(buildURL1);
 

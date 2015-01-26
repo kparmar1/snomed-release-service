@@ -32,7 +32,7 @@ public class Build {
 	private Product product;
 
 	public static enum Status {
-		BEFORE_TRIGGER, FAILED_PRE_CONDITIONS, BUILDING, BUILT, UNKNOWN
+		BEFORE_TRIGGER, FAILED_PRE_CONDITIONS, QUEUED, BUILDING, BUILT, UNKNOWN
 	}
 
 	private Build(String creationTime, String productBusinessKey, BuildConfiguration configuration) {

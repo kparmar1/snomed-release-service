@@ -121,7 +121,7 @@ public class BuildController {
 	@ResponseBody
 	public Map<String, Object> triggerProduct(@PathVariable String releaseCenterKey, @PathVariable String productKey,
 			@PathVariable String buildId, HttpServletRequest request) throws BusinessServiceException {
-		Build build = buildService.triggerBuild(releaseCenterKey, productKey, buildId);
+		Build build = buildService.queueBuild(releaseCenterKey, productKey, buildId);
 
 		return hypermediaGenerator.getEntityHypermediaOfAction(build, request, BUILD_LINKS);
 	}

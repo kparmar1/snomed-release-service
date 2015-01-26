@@ -81,15 +81,15 @@ public class BuildDAOImpl implements BuildDAO {
 	@Autowired
 	private BuildS3PathHelper pathHelper;
 
-	@Autowired
 	private String buildBucketName;
 
 	@Autowired
 	private ProductInputFileDAO productInputFileDAO;
 
 	@Autowired
-	public BuildDAOImpl(final String buildBucketName, final String publishedBucketName, final S3Client s3Client, final S3ClientHelper s3ClientHelper) {
+	public BuildDAOImpl(final String buildBucketName, final String publishedBucketName, final S3Client s3Client) {
 		executorService = Executors.newCachedThreadPool();
+		final S3ClientHelper s3ClientHelper = new S3ClientHelper(s3Client);
 		buildFileHelper = new FileHelper(buildBucketName, s3Client, s3ClientHelper);
 		publishedFileHelper = new FileHelper(publishedBucketName, s3Client, s3ClientHelper);
 
@@ -439,7 +439,6 @@ public class BuildDAOImpl implements BuildDAO {
 				new ByteArrayInputStream(contents.getBytes()), new ObjectMetadata());
 	}
 
-	@Required
 	public void setBuildBucketName(final String buildBucketName) {
 		this.buildBucketName = buildBucketName;
 	}

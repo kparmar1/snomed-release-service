@@ -1,6 +1,8 @@
 package org.ihtsdo.buildcloud.service;
 
 import org.apache.log4j.MDC;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectWriter;
 import org.ihtsdo.buildcloud.dao.BuildDAO;
 import org.ihtsdo.buildcloud.dao.ProductDAO;
 import org.ihtsdo.buildcloud.dao.io.AsyncPipedStreamBean;
@@ -29,6 +31,8 @@ import org.ihtsdo.telemetry.client.TelemetryStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.JmsException;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,6 +96,15 @@ public class BuildServiceImpl implements BuildService {
 	@Autowired
 	private RF2ClassifierService classifierService;
 
+	@Autowired
+	private JmsTemplate jmsTemplate;
+
+	private final ObjectWriter buildJSONWriter;
+
+	public BuildServiceImpl() {
+		buildJSONWriter = new ObjectMapper().writerWithType(Build.class);
+	}
+
 	@Override
 	public Build createBuildFromProduct(final String releaseCenterKey, final String productKey) throws BusinessServiceException {
 		final Date creationDate = new Date();
@@ -134,7 +147,7 @@ public class BuildServiceImpl implements BuildService {
 	}
 
 	@Override
-	public Build triggerBuild(String releaseCenterKey, final String productKey, final String buildId) throws BusinessServiceException {
+	public Build queueBuild(String releaseCenterKey, String productKey, String buildId) throws BusinessServiceException {
 		final Build build = getBuildOrThrow(releaseCenterKey, productKey, buildId);
 		try {
 			dao.loadConfiguration(build);
@@ -142,12 +155,26 @@ public class BuildServiceImpl implements BuildService {
 			throw new BusinessServiceException("Failed to load build configuration.", e);
 		}
 
+		try {
+			String buildJSON = buildJSONWriter.writeValueAsString(build);
+			jmsTemplate.convertAndSend(buildJSON); // Send to default queue
+		} catch (IOException e) {
+			throw new BusinessServiceException("Failed to serialize build object. BuildID:" + buildId, e);
+		} catch (JmsException e) {
+			throw new BusinessServiceException("Failed to send serialized build to the build queue. BuildID:" + buildId, e);
+		}
+		updateStatusWithChecks(build, Build.Status.QUEUED);
+		return build;
+	}
+
+	@Override
+	public Build triggerBuild(Build build) throws BusinessServiceException {
 		// Start the build telemetry stream. All future logging on this thread and it's children will be captured.
 		TelemetryStream.start(LOGGER, dao.getTelemetryBuildLogFilePath(build));
-		LOGGER.info("Trigger product", productKey, buildId);
+		LOGGER.info("Trigger build", build.getId());
 
 		try {
-			updateStatusWithChecks(build, Status.BUILDING);
+			updateStatusWithChecks(build, Build.Status.BUILDING);
 
 			// Run product
 			BuildReport report = build.getBuildReport();
@@ -165,7 +192,7 @@ public class BuildServiceImpl implements BuildService {
 			report.add("Message", resultMessage);
 			dao.persistReport(build); // TODO: Does this work?
 
-			updateStatusWithChecks(build, Status.BUILT);
+			updateStatusWithChecks(build, Build.Status.BUILT);
 		} finally {
 			// Finish the telemetry stream. Logging on this thread will no longer be captured.
 			TelemetryStream.finish(LOGGER);

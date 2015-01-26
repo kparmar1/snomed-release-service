@@ -8,7 +8,7 @@
 		</layout>
 	</appender>
 	<appender name="telemetry" class="org.ihtsdo.telemetry.client.TelemetryEventAppender">
-		<param name="Service" value="SRS_API"/>
+		<param name="Service" value="SRS_Worker"/>
 		<param name="Environment" value="${ENV_NAME}"/>
 	</appender>
 	<logger name="org.ihtsdo" additivity="false">

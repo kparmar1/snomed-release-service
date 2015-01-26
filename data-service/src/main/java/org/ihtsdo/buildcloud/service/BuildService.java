@@ -8,13 +8,18 @@ import org.ihtsdo.buildcloud.service.exception.ResourceNotFoundException;
 import java.io.InputStream;
 import java.util.List;
 
+/**
+ * This service is for setting up and creating a Build.
+ */
 public interface BuildService {
 
 	String MDC_BUILD_KEY = "build";
 
 	Build createBuildFromProduct(String releaseCenterKey, String productKey) throws BusinessServiceException;
 
-	Build triggerBuild(String releaseCenterKey, String productKey, String buildId) throws BusinessServiceException;
+	Build queueBuild(String releaseCenterKey, String productKey, String buildId) throws BusinessServiceException;
+
+	Build triggerBuild(Build build) throws BusinessServiceException;
 
 	List<Build> findAllDesc(String releaseCenterKey, String productKey) throws ResourceNotFoundException;
 
