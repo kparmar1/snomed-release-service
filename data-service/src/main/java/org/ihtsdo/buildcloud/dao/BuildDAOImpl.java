@@ -104,9 +104,12 @@ public class BuildDAOImpl implements BuildDAO {
 		// Save config file
 		final String configPath = pathHelper.getBuildConfigFilePath(build);
 <<<<<<< HEAD
+<<<<<<< HEAD
 		putFile(configPath, toJson(build.getConfiguration()));
 		putFile(pathHelper.getQATestConfigFilePath(build),toJson(build.getQaTestConfig()));
 =======
+=======
+>>>>>>> f1d4a1c... Fix config json with utf-8 encoding issue
 		LOGGER.debug("Readme header from build config:"  +  build.getConfiguration().getReadmeHeader());
 		File configJson = null;
 		try {
@@ -126,7 +129,7 @@ public class BuildDAOImpl implements BuildDAO {
 				qaConfigJson.delete();
 			}
 		}
->>>>>>> f1d4a1c... Fix config json with utf-8 encoding issue
+
 		// Save status file
 		updateStatus(build, Build.Status.BEFORE_TRIGGER);
 	}
@@ -137,11 +140,7 @@ public class BuildDAOImpl implements BuildDAO {
 		try (JsonGenerator jsonGenerator = jsonFactory.createJsonGenerator(temp, JsonEncoding.UTF8)) {
 			jsonGenerator.writeObject(obj);
 		}
-<<<<<<< HEAD
-		return stringWriter.toString();
-=======
 		return temp;
->>>>>>> f1d4a1c... Fix config json with utf-8 encoding issue
 	}
 
 	@Override
