@@ -150,6 +150,11 @@
 			<artifactId>json-simple</artifactId>
 			<version>1.1</version>
 		</dependency>
+		<dependency>
+			<groupId>com.google.code.externalsortinginjava</groupId>
+			<artifactId>externalsortinginjava</artifactId>
+			<version>0.1.9</version>
+		</dependency>
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.mockito</groupId>
