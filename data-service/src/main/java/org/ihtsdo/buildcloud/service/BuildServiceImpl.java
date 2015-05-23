@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -187,7 +188,7 @@ public class BuildServiceImpl implements BuildService {
 		final FileOutputStream tempOutputStream = new FileOutputStream(tempFile);
 		
 		// Generate inferred relationship ids using transform looking up previous IDs where available
-		Map<String, String> existingUuidToSctidMap = null;
+		Map<String, Deque<String>> existingUuidToSctidMap = null;
 		final String relationshipSnapshotFilename = statedRelationshipInputFile.replace(SchemaFactory.REL_2, SchemaFactory.SCT_2).replace(RF2Constants.DELTA, RF2Constants.SNAPSHOT);
 		LOGGER.debug("Recovering previous stated relationship snapshot");
 		final String previousStatedRelationshipFilePath = classifierService.getPreviousRelationshipFilePath(build, relationshipSnapshotFilename,

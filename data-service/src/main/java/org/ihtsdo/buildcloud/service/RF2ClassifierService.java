@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
@@ -88,7 +89,7 @@ public class RF2ClassifierService {
 					String previousInferredRelationshipFilePath = null;
 
 					// Generate inferred relationship ids using transform looking up previous IDs where available
-					Map<String, String> uuidToSctidMap = null;
+					Map<String, Deque<String>> uuidToSctidMap = null;
 					if (!configuration.isFirstTimeRelease()) {
 						final String currentRelationshipFilename = classifierFiles.getStatedRelationshipSnapshotFilenames().get(0);
 						previousInferredRelationshipFilePath = getPreviousRelationshipFilePath(build, currentRelationshipFilename,

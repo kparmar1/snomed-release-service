@@ -4,6 +4,7 @@ import org.ihtsdo.buildcloud.service.build.transform.conditional.ConditionalTran
 import org.ihtsdo.snomed.util.rf2.schema.*;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,7 +18,8 @@ public class TransformationFactory {
 	private final String modelModuleSctid;
 	private final Integer transformBufferSize;
 	private Set<String> modelConceptIdsForModuleIdFix;
-	private Map<String, String> existingUuidToSctidMap;
+	private Map<String, Deque<String>> existingUuidToSctidMap;
+	private List<String> sctIdsAlreadyInUse;
 
 	public TransformationFactory(final String effectiveTimeInSnomedFormat, final CachedSctidFactory cachedSctidFactory, final UUIDGenerator uuidGenerator,
 			final String coreModuleSctid, final String modelModuleSctid, final Integer transformBufferSize) {
@@ -212,7 +214,7 @@ public class TransformationFactory {
 				// id
 				.addTransformation(new RepeatableRelationshipUUIDTransform());
 		if (existingUuidToSctidMap != null) {
-			streamingFileTransformation.addTransformation(new ReplaceStringTransform(0, existingUuidToSctidMap));
+			streamingFileTransformation.addTransformation(new RelationshipIdentifierTransform(existingUuidToSctidMap, sctIdsAlreadyInUse));
 		}
 		streamingFileTransformation
 			.addTransformation(new SCTIDTransformation(0, 3, ShortFormatSCTIDPartitionIdentifier.RELATIONSHIP, cachedSctidFactory));
@@ -300,8 +302,12 @@ public class TransformationFactory {
 		return cachedSctidFactory;
 	}
 
-	public void setExistingUuidToSctidMap(Map<String, String> existingUuidToSctidMap) {
+	public void setExistingUuidToSctidMap(Map<String, Deque<String>> existingUuidToSctidMap) {
 		this.existingUuidToSctidMap = existingUuidToSctidMap;
+	}
+
+	public void setSctIdsAlreadyInUse(List<String> sctIdsAlreadyInUse) {
+		this.sctIdsAlreadyInUse = sctIdsAlreadyInUse;
 	}
 
 }

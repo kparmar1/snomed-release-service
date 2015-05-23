@@ -280,7 +280,7 @@ public class TransformationService {
 	}
 
 	public void transformInferredRelationshipFile(final Build build, final String relationshipFilename,
-			Map<String, String> existingUuidToSctidMap) {
+			Map<String, Deque<String>> existingUuidToSctidMap) {
 
 		final TransformationFactory transformationFactory = getTransformationFactory(build);
 		transformationFactory.setExistingUuidToSctidMap(existingUuidToSctidMap);
