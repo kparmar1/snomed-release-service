@@ -307,20 +307,20 @@ public class TransformationService {
 	 * radically changing the logic of streaming transformation, So we'll allow SRS to roll up older (unused) relationships
 	 */
 	public void transformInferredRelationshipFile_2ndPass(final Build build, final String relationshipFilename,
-			 File inferredRelationships1stPassFile) {
+			 File inferredRelationships1stPassFile, List<Long> sctIdsAlreadyInActiveUse) {
 
 		final TransformationFactory transformationFactory = getTransformationFactory(build);
-
+		transformationFactory.setSctIdsAlreadyInActiveUse(sctIdsAlreadyInActiveUse);
+		
 		try (AsyncPipedStreamBean outputFileOutputStream = dao.getOutputFileOutputStream(build, relationshipFilename);
 				InputStream is = new FileInputStream (inferredRelationships1stPassFile)) {
 			final StreamingFileTransformation fileTransformation = transformationFactory.getSteamingFileTransformation(
 					new TableSchema(ComponentType.RELATIONSHIP, relationshipFilename), TRANSFORMATION_PASS.SECOND_PASS);
-			final BuildReport report = build.getBuildReport();
 			fileTransformation.transformFile(
 					is,
 					outputFileOutputStream.getOutputStream(),
 					relationshipFilename,
-					report);
+					build.getBuildReport());
 		} catch (IOException | TransformationException | FileRecognitionException | NoSuchAlgorithmException e) {
 			LOGGER.error("Failed to transform inferred relationship file.", e);
 		}

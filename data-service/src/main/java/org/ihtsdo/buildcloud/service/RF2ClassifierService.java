@@ -128,6 +128,9 @@ public class RF2ClassifierService {
 					uploadLog(build, equivalencyReportOutputFile, RF2Constants.EQUIVALENCY_REPORT_TXT);
 
 					// Upload inferred relationships file with null ids
+					// TODO This upload (and the subsequent one) is for information only, so could
+					// be done asynchronously. However, we also need to delete it, so a housekeeping
+					// service could be written to check when the upload is complete and remove it.
 					buildDAO.putTransformedFile(build, inferredRelationshipsOutputFile);
 
 					List<Long> sctIdsAlreadyInActiveUse = generateSctIdsAlreadyInActiveUse(inferredRelationshipsOutputFile);
@@ -145,7 +148,7 @@ public class RF2ClassifierService {
 					// The 2nd pass will request further SCTIDs from IDGen if none could be found for reuse,
 					// and NOT YET remove rows where the SCTID has been moved from an inactive row to an active one
 					transformationService.transformInferredRelationshipFile_2ndPass(build, inferredRelationshipSnapshotFilename,
-							inferredRelationships1stPassFile);
+							inferredRelationships1stPassFile, sctIdsAlreadyInActiveUse);
 
 					return inferredRelationshipSnapshotFilename;
 				} else {

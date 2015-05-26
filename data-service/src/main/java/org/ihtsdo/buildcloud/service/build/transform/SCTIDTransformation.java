@@ -4,6 +4,8 @@ import org.ihtsdo.buildcloud.service.RelationshipHelper;
 import org.ihtsdo.buildcloud.service.helper.Type5UuidFactory;
 import org.ihtsdo.idgen.ws.CreateSCTIDFaultException;
 import org.ihtsdo.idgen.ws.CreateSCTIDListFaultException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.rmi.RemoteException;
@@ -16,6 +18,8 @@ public class SCTIDTransformation implements BatchLineTransformation {
 
 	public static final String ID_GEN_MODULE_ID_PARAM = "1";
 	
+	private static final Logger logger = LoggerFactory.getLogger(SCTIDTransformation.class);
+
 	private final CachedSctidFactory sctidFactory;
 
 	private final int componentIdCol;
@@ -56,6 +60,7 @@ public class SCTIDTransformation implements BatchLineTransformation {
 						if (isAlreadyInUse) {
 							// Increase the group number to get a new UUID and obtain an SCTID based on that
 							uuidString = RelationshipHelper.getNextUUID(columnValues);
+							logger.warn("SCTID {} already in use.  Obtaining another one with group-incremented UUID {}", sctid, uuidString);
 							sctid = sctidFactory.getSCTID(uuidString, partitionId, moduleId);
 						} else {
 							sctIdsAlreadyInActiveUse.add(sctid);
