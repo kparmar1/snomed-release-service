@@ -101,7 +101,6 @@ public class StreamingFileTransformation {
 		}
 
 		for (String[] columnValues : columnValuesList) {
-			// Write transformed line to temp file
 			stringBuilder.setLength(0);// reuse StringBuilder
 			for (int a = 0; a < columnValues.length; a++) {
 				if (a > 0) {

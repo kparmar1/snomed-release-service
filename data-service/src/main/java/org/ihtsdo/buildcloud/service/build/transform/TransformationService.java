@@ -6,6 +6,7 @@ import org.ihtsdo.buildcloud.entity.Build;
 import org.ihtsdo.buildcloud.entity.BuildConfiguration;
 import org.ihtsdo.buildcloud.entity.BuildReport;
 import org.ihtsdo.buildcloud.service.build.RF2Constants;
+import org.ihtsdo.buildcloud.service.build.transform.TransformationFactory.TRANSFORMATION_PASS;
 import org.ihtsdo.buildcloud.service.workbenchdatafix.ModuleResolverService;
 import org.ihtsdo.idgeneration.IdAssignmentBI;
 import org.ihtsdo.otf.rest.exception.BadInputFileException;
@@ -204,7 +205,8 @@ public class TransformationService {
 							final OutputStream buildTransformedOutputStream = asyncPipedStreamBean.getOutputStream();
 
 							// Get appropriate transformations for this file.
-							final StreamingFileTransformation steamingFileTransformation = transformationFactory.getSteamingFileTransformation(tableSchema);
+							final StreamingFileTransformation steamingFileTransformation = transformationFactory
+									.getSteamingFileTransformation(tableSchema, TRANSFORMATION_PASS.FIRST_PASS);
 
 							// Get the report to output to
 							// Apply transformations
@@ -279,18 +281,43 @@ public class TransformationService {
 		return moduleIdAndUuidMap;
 	}
 
-	public void transformInferredRelationshipFile(final Build build, final String relationshipFilename,
-			Map<String, Deque<String>> existingUuidToSctidMap) {
+	/**
+	 * First pass replaces nulls with reused existing identifiers
+	 */
+	public void transformInferredRelationshipFile_1stPass(final Build build, final String relationshipFilename,
+			Map<String, Deque<String>> existingUuidToSctidMap, File inferredRelationships1stPassFile, List<Long> sctIdsAlreadyInActiveUse) {
 
 		final TransformationFactory transformationFactory = getTransformationFactory(build);
 		transformationFactory.setExistingUuidToSctidMap(existingUuidToSctidMap);
+		transformationFactory.setSctIdsAlreadyInActiveUse(sctIdsAlreadyInActiveUse);
 
-		try (AsyncPipedStreamBean outputFileOutputStream = dao.getOutputFileOutputStream(build, relationshipFilename)) {
+		try (FileOutputStream os = new FileOutputStream(inferredRelationships1stPassFile)) {
+			final StreamingFileTransformation fileTransformation = transformationFactory.getSteamingFileTransformation(new TableSchema(
+					ComponentType.RELATIONSHIP, relationshipFilename), TRANSFORMATION_PASS.FIRST_PASS);
+			final BuildReport report = build.getBuildReport();
+			InputStream is = dao.getTransformedFileAsInputStream(build, relationshipFilename);
+			fileTransformation.transformFile(is, os, relationshipFilename, report);
+		} catch (IOException | TransformationException | FileRecognitionException | NoSuchAlgorithmException e) {
+			LOGGER.error("Failed to transform inferred relationship file on 1st pass.", e);
+		}
+	}
+
+	/**
+	 * 2nd Pass obtains IDs from IDGen where required, Removing superseeded lines where identifiers have been used elsewhere would mean
+	 * radically changing the logic of streaming transformation, So we'll allow SRS to roll up older (unused) relationships
+	 */
+	public void transformInferredRelationshipFile_2ndPass(final Build build, final String relationshipFilename,
+			 File inferredRelationships1stPassFile) {
+
+		final TransformationFactory transformationFactory = getTransformationFactory(build);
+
+		try (AsyncPipedStreamBean outputFileOutputStream = dao.getOutputFileOutputStream(build, relationshipFilename);
+				InputStream is = new FileInputStream (inferredRelationships1stPassFile)) {
 			final StreamingFileTransformation fileTransformation = transformationFactory.getSteamingFileTransformation(
-					new TableSchema(ComponentType.RELATIONSHIP, relationshipFilename));
+					new TableSchema(ComponentType.RELATIONSHIP, relationshipFilename), TRANSFORMATION_PASS.SECOND_PASS);
 			final BuildReport report = build.getBuildReport();
 			fileTransformation.transformFile(
-					dao.getTransformedFileAsInputStream(build, relationshipFilename),
+					is,
 					outputFileOutputStream.getOutputStream(),
 					relationshipFilename,
 					report);

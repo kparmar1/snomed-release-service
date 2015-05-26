@@ -1,5 +1,6 @@
 package org.ihtsdo.buildcloud.service.build.transform;
 
+import org.ihtsdo.buildcloud.service.build.transform.TransformationFactory.TRANSFORMATION_PASS;
 import org.ihtsdo.snomed.util.rf2.schema.*;
 import org.junit.Assert;
 import org.junit.Before;
@@ -24,7 +25,8 @@ public class TransformationFactoryTest {
 	@Test
 	public void testGetSteamingFileTransformation() throws Exception {
 
-		StreamingFileTransformation transformation = transformationFactory.getSteamingFileTransformation(schemaBean);
+		StreamingFileTransformation transformation = transformationFactory.getSteamingFileTransformation(schemaBean,
+				TRANSFORMATION_PASS.FIRST_PASS);
 
 		List<Transformation> lineTransformations = transformation.getTransformations();
 		Assert.assertEquals(7, lineTransformations.size());

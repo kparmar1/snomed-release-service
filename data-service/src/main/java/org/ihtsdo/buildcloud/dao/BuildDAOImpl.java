@@ -297,7 +297,17 @@ public class BuildDAOImpl implements BuildDAO {
 
 	@Override
 	public void putTransformedFile(final Build build, final File file) throws IOException {
-		final String name = file.getName();
+		putTransformedFile(build, file, "");
+	}
+
+	@Override
+	public void putTransformedFile(final Build build, final File file, String nameModifier) throws IOException {
+		String name = file.getName();
+
+		// If we're changing the name of the file on the way up, put that as an underscore
+		if (nameModifier.length() > 0) {
+			name += "_" + nameModifier;
+		}
 		final String outputPath = pathHelper.getBuildTransformedFilesPath(build).append(name).toString();
 		try {
 			buildFileHelper.putFile(file, outputPath);

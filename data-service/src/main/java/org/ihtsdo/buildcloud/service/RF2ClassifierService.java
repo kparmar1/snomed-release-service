@@ -11,6 +11,8 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 import org.ihtsdo.buildcloud.dao.BuildDAO;
 import org.ihtsdo.buildcloud.dao.io.AsyncPipedStreamBean;
 import org.ihtsdo.buildcloud.entity.Build;
@@ -32,6 +34,9 @@ import org.springframework.util.StreamUtils;
 import com.google.common.io.Files;
 
 public class RF2ClassifierService {
+
+	public static int ID_INDEX = 0;
+	public static int ACTIVE_FLAG_INDEX = 2;
 
 	@Autowired
 	private BuildDAO buildDAO;
@@ -125,7 +130,22 @@ public class RF2ClassifierService {
 					// Upload inferred relationships file with null ids
 					buildDAO.putTransformedFile(build, inferredRelationshipsOutputFile);
 
-					transformationService.transformInferredRelationshipFile(build, inferredRelationshipSnapshotFilename, uuidToSctidMap);
+					List<Long> sctIdsAlreadyInActiveUse = generateSctIdsAlreadyInActiveUse(inferredRelationshipsOutputFile);
+
+					// First pass will replace nulls with predictable UUIDs and those UUIDS with previously assigned SCTIDs
+					// It will also build a list of already assigned active identifiers to ensure we don't use those if returned from IDGen
+					// And a list of SCTIDs that have been re-used (pinched) from inactive relationships
+					final File inferredRelationships1stPassFile = new File(tempDir, inferredRelationshipSnapshotFilename + "_1stPass");
+					transformationService.transformInferredRelationshipFile_1stPass(build, inferredRelationshipSnapshotFilename,
+							uuidToSctidMap, inferredRelationships1stPassFile, sctIdsAlreadyInActiveUse);
+
+					// Upload the 1st pass file for audit / forensic / debug purposes
+					buildDAO.putTransformedFile(build, inferredRelationships1stPassFile);
+
+					// The 2nd pass will request further SCTIDs from IDGen if none could be found for reuse,
+					// and NOT YET remove rows where the SCTID has been moved from an inactive row to an active one
+					transformationService.transformInferredRelationshipFile_2ndPass(build, inferredRelationshipSnapshotFilename,
+							inferredRelationships1stPassFile);
 
 					return inferredRelationshipSnapshotFilename;
 				} else {
@@ -142,6 +162,34 @@ public class RF2ClassifierService {
 	}
 
 
+
+	private List<Long> generateSctIdsAlreadyInActiveUse(File inferredRelationshipsOutputFile) throws IOException {
+		// Scan through all the lines in the local file and store any SCTIDs currently assigned to
+		// Active relationships, to ensure we don't reallocate them to any other row.
+		List<Long> sctIdsAlreadyInActiveUse = new ArrayList<Long>();
+		LineIterator it = FileUtils.lineIterator(inferredRelationshipsOutputFile, "UTF-8");
+		logger.debug("Generating list of SCTIDs already in active use.");
+		long rowsRead = 0;
+		long activeRows = 0;
+		try {
+			while (it.hasNext()) {
+				String line = it.nextLine();
+				String[] columnValues = line.split(RF2Constants.COLUMN_SEPARATOR);
+				String thisId = columnValues[ID_INDEX];
+				if (thisId != null && !thisId.equals(RF2Constants.NULL_STRING)) {
+					if (columnValues[ACTIVE_FLAG_INDEX].equals(RF2Constants.ACTIVE_FLAG_ACTIVE)) {
+						sctIdsAlreadyInActiveUse.add(Long.parseLong(thisId));
+						activeRows++;
+					}
+				}
+				rowsRead++;
+			}
+		} finally {
+			LineIterator.closeQuietly(it);
+		}
+		logger.info("Recorded {} active rows out of {}", activeRows, rowsRead);
+		return sctIdsAlreadyInActiveUse;
+	}
 
 	public boolean checkNoStatedRelationshipCycles(final Build build, final List<String> localConceptFilePaths,
 			final List<String> localStatedRelationshipFilePaths, final File cycleFile) throws ProcessingException {

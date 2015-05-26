@@ -19,7 +19,11 @@ public class TransformationFactory {
 	private final Integer transformBufferSize;
 	private Set<String> modelConceptIdsForModuleIdFix;
 	private Map<String, Deque<String>> existingUuidToSctidMap;
-	private List<String> sctIdsAlreadyInUse;
+	private List<Long> sctIdsAlreadyInActiveUse;
+
+	public static enum TRANSFORMATION_PASS {
+		FIRST_PASS, SECOND_PASS
+	};
 
 	public TransformationFactory(final String effectiveTimeInSnomedFormat, final CachedSctidFactory cachedSctidFactory, final UUIDGenerator uuidGenerator,
 			final String coreModuleSctid, final String modelModuleSctid, final Integer transformBufferSize) {
@@ -39,13 +43,14 @@ public class TransformationFactory {
 		} else if (componentType == ComponentType.RELATIONSHIP) {
 			// PreProcess transform is same as later transform - use repeatable UUID to lookup historic SCTID,
 			// or request from IDGen
-			return getRelationshipFileTransformation();
+			return getStatedRelationshipDeltaFileTransformation();
 		} else {
 			return null;
 		}
 	}
 
-	public StreamingFileTransformation getSteamingFileTransformation(final TableSchema tableSchema) throws FileRecognitionException, NoSuchAlgorithmException {
+	public StreamingFileTransformation getSteamingFileTransformation(final TableSchema tableSchema, TRANSFORMATION_PASS pass)
+			throws FileRecognitionException, NoSuchAlgorithmException {
 		StreamingFileTransformation transformation;
 
 		switch (tableSchema.getComponentType()) {
@@ -62,7 +67,7 @@ public class TransformationFactory {
 				transformation = getStatedRelationshipFileTransformation();
 				break;
 			case RELATIONSHIP:
-				transformation = getRelationshipFileTransformation();
+				transformation = getRelationshipFileTransformation(pass);
 				break;
 			case IDENTIFIER:
 				transformation = getIdentifierFileTransformation();
@@ -208,18 +213,40 @@ public class TransformationFactory {
 		return streamingFileTransformation;
 	}
 
-	private StreamingFileTransformation getRelationshipFileTransformation() throws NoSuchAlgorithmException {
+	private StreamingFileTransformation getStatedRelationshipDeltaFileTransformation() throws NoSuchAlgorithmException {
 		// TIG - www.snomed.org/tig?t=trg2main_format_rel
 		final StreamingFileTransformation streamingFileTransformation = newStreamingFileTransformation()
-				// id
+		// id
 				.addTransformation(new RepeatableRelationshipUUIDTransform());
 		if (existingUuidToSctidMap != null) {
-			streamingFileTransformation.addTransformation(new RelationshipIdentifierTransform(existingUuidToSctidMap, sctIdsAlreadyInUse));
+			streamingFileTransformation.addTransformation(new RelationshipIdentifierTransform(existingUuidToSctidMap,
+					sctIdsAlreadyInActiveUse));
 		}
-		streamingFileTransformation
-			.addTransformation(new SCTIDTransformation(0, 3, ShortFormatSCTIDPartitionIdentifier.RELATIONSHIP, cachedSctidFactory));
+		streamingFileTransformation.addTransformation(new SCTIDTransformation(0, 3, ShortFormatSCTIDPartitionIdentifier.RELATIONSHIP,
+				cachedSctidFactory));
 
 		return streamingFileTransformation;
+	}
+
+	private StreamingFileTransformation getRelationshipFileTransformation(TRANSFORMATION_PASS pass) throws NoSuchAlgorithmException {
+		// TIG - www.snomed.org/tig?t=trg2main_format_rel
+		final StreamingFileTransformation trans = newStreamingFileTransformation();
+		switch (pass) {
+			case FIRST_PASS:
+				trans.addTransformation(new RepeatableRelationshipUUIDTransform());
+				if (existingUuidToSctidMap != null) {
+					trans.addTransformation(new RelationshipIdentifierTransform(existingUuidToSctidMap, sctIdsAlreadyInActiveUse));
+				}
+				break;
+			case SECOND_PASS:
+				// Fill any remaining null ID columns by requesting from IDGen
+				trans.addTransformation(new SCTIDTransformation(0, 3, ShortFormatSCTIDPartitionIdentifier.RELATIONSHIP, cachedSctidFactory,
+						sctIdsAlreadyInActiveUse));
+				// Filter out any IDs that have been used for active rows, that are no longer needed in inactivate ones
+				// trans.addTransformation(new SuperseededIdentifierFilter(sctIdsAlreadyInActiveUse));
+		}
+
+		return trans;
 	}
 
 	private StreamingFileTransformation getIdentifierFileTransformation() {
@@ -306,8 +333,8 @@ public class TransformationFactory {
 		this.existingUuidToSctidMap = existingUuidToSctidMap;
 	}
 
-	public void setSctIdsAlreadyInUse(List<String> sctIdsAlreadyInUse) {
-		this.sctIdsAlreadyInUse = sctIdsAlreadyInUse;
+	public void setSctIdsAlreadyInActiveUse(List<Long> sctIdsAlreadyInActiveUse) {
+		this.sctIdsAlreadyInActiveUse = sctIdsAlreadyInActiveUse;
 	}
 
 }

@@ -21,7 +21,7 @@ public class SCTIDTransformation implements BatchLineTransformation {
 	private final int componentIdCol;
 	private final int moduleIdCol;
 	private final String partitionId;
-	private List<Long> activeSCTIDsInUse;
+	private List<Long> sctIdsAlreadyInActiveUse;
 
 	public SCTIDTransformation(int componentIdCol, int moduleIdCol, String partitionId, CachedSctidFactory sctidFactory) {
 		this.sctidFactory = sctidFactory;
@@ -33,9 +33,9 @@ public class SCTIDTransformation implements BatchLineTransformation {
 	// Modifier that will allow us to look up an alternative SCTID (currently only for Relationships)
 	// if the one returned is already active and in use
 	public SCTIDTransformation(int componentIdCol, int moduleIdCol, String partitionId, CachedSctidFactory sctidFactory,
-			List<Long> activeSCTIDsInUse) {
+			List<Long> sctIdsAlreadyInActiveUse) {
 		this(componentIdCol, moduleIdCol, partitionId, sctidFactory);
-		this.activeSCTIDsInUse = activeSCTIDsInUse; // For use with Relationships and predictable UUIDs only
+		this.sctIdsAlreadyInActiveUse = sctIdsAlreadyInActiveUse; // For use with Relationships and predictable UUIDs only
 	}
 
 	public void transformLine(String[] columnValues) throws TransformationException {
@@ -49,16 +49,16 @@ public class SCTIDTransformation implements BatchLineTransformation {
 				Long sctid = sctidFactory.getSCTID(uuidString, partitionId, moduleId);
 
 				// Are we checking against a list of SCTIDs in use to ensure this one is unique?
-				if (activeSCTIDsInUse != null) {
+				if (sctIdsAlreadyInActiveUse != null) {
 					boolean isAlreadyInUse = true;
 					while (isAlreadyInUse) {
-						isAlreadyInUse = activeSCTIDsInUse.contains(sctid);
+						isAlreadyInUse = sctIdsAlreadyInActiveUse.contains(sctid);
 						if (isAlreadyInUse) {
 							// Increase the group number to get a new UUID and obtain an SCTID based on that
 							uuidString = RelationshipHelper.getNextUUID(columnValues);
 							sctid = sctidFactory.getSCTID(uuidString, partitionId, moduleId);
 						} else {
-							activeSCTIDsInUse.add(sctid);
+							sctIdsAlreadyInActiveUse.add(sctid);
 						}
 					}
 				}

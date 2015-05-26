@@ -25,6 +25,8 @@ public class RF2Constants {
 	public static final String ZIP_FILE_EXTENSION = ".zip";
 	public static final String BOOLEAN_TRUE = "1";
 	public static final String BOOLEAN_FALSE = "0";
+	public static final String ACTIVE_FLAG_ACTIVE = "1";
+	public static final String ACTIVE_FLAG_INACTIVE = "0";
 	public static final CharSequence ATTRIBUTE_VALUE_FILE_IDENTIFIER = "AttributeValue";
 	public static final String EMPTY_SPACE = "";
 	public static final String DATA_PROBLEM = "Data Problem:";

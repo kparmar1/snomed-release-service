@@ -8,37 +8,49 @@ import java.util.List;
 import java.util.Map;
 
 import org.ihtsdo.buildcloud.service.helper.Type5UuidFactory;
-
-import com.sun.j3d.utils.scenegraph.io.UnsupportedUniverseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RelationshipIdentifierTransform implements LineTransformation {
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(RelationshipIdentifierTransform.class);
 
 	private static final int ID_COLUMN_INDEX = 0;
 	private static final int GROUP_COLUMN_INDEX = 6;
 	private static final int MAX_GROUP_NUM = 12; // We'll go above this only if the classifier does.
 	private final Map<String, Deque<String>> matchToReplacementMap;
-	private final List<String> activeSctIdsAlreadyInUse;
+	private final List<Long> sctIdsAlreadyInActiveUse;
 
 	private Type5UuidFactory type5UuidFactory;
 
-	public RelationshipIdentifierTransform(Map<String, Deque<String>> matchToReplacementMap, List<String> activeSctIdsAlreadyInUse)
+	public RelationshipIdentifierTransform(Map<String, Deque<String>> matchToReplacementMap, List<Long> sctIdsAlreadyInActiveUse)
 			throws NoSuchAlgorithmException {
 		this.matchToReplacementMap = matchToReplacementMap;
-		this.activeSctIdsAlreadyInUse = activeSctIdsAlreadyInUse;
+		this.sctIdsAlreadyInActiveUse = sctIdsAlreadyInActiveUse;
 		this.type5UuidFactory = new Type5UuidFactory();
 	}
 
 	@Override
 	public void transformLine(String[] columnValues) throws TransformationException {
 		try {
+			// This transformation is only for UUIDs, so toddle off in other cases
+			// Detect a UUID by it containing a dash
+			String thisId = columnValues[ID_COLUMN_INDEX];
+			if (thisId == null || !thisId.contains("-")) {
+				return;
+			}
+
 			// We can pinch an SCTID from any group with the same triple, as long as the id is not already in use
 			// but start by looking at a UUID that's already for this group
 			List<String> potentialUUIDs = getPotentialUUIDs(columnValues);
 
 			// We should already have the predicted UUID for the current triple + group
-			assert columnValues[ID_COLUMN_INDEX].equals(potentialUUIDs.get(0));
+			if (!thisId.equals(potentialUUIDs.get(0))) {
+				throw new TransformationException("Attempting to use UUID relationship transformation on non-predicted UUID: "
+						+ columnValues[0]);
+			}
+			
 			boolean replacementMade = false;
-
 			for (String thisPotentialUUID : potentialUUIDs) {
 				if (matchToReplacementMap.containsKey(thisPotentialUUID)) {
 					// We have a stack of potential values to use, check that they're not already in use before replacing
@@ -47,9 +59,9 @@ public class RelationshipIdentifierTransform implements LineTransformation {
 					while (replacementMade == false && thisStack != null && !thisStack.isEmpty()) {
 						String potentialReplacement = thisStack.pop();
 						// Is this value already in use?
-						if (!activeSctIdsAlreadyInUse.contains(potentialReplacement)) {
+						if (!sctIdsAlreadyInActiveUse.contains(potentialReplacement)) {
 							columnValues[ID_COLUMN_INDEX] = potentialReplacement;
-							activeSctIdsAlreadyInUse.add(potentialReplacement);
+							sctIdsAlreadyInActiveUse.add(Long.parseLong(potentialReplacement));
 							// Now this SCTID might historically exist for multiple UUIDs as it has moved groups, so that's why we
 							// need a list not based on tracking the UUID.
 							replacementMade = true;

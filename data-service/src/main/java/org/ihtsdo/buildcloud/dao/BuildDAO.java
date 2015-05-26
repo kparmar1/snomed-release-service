@@ -57,6 +57,8 @@ public interface BuildDAO {
 
 	void putTransformedFile(Build build, File file) throws IOException;
 
+	void putTransformedFile(Build build, File file, String nameModifier) throws IOException;
+
 	InputStream getManifestStream(Build build);
 
 	List<String> listTransformedFilePaths(Build build);
