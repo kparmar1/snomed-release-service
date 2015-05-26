@@ -297,23 +297,15 @@ public class BuildDAOImpl implements BuildDAO {
 
 	@Override
 	public void putTransformedFile(final Build build, final File file) throws IOException {
-		putTransformedFile(build, file, "");
-	}
-
-	@Override
-	public void putTransformedFile(final Build build, final File file, String nameModifier) throws IOException {
 		String name = file.getName();
-
-		// If we're changing the name of the file on the way up, put that as an underscore
-		if (nameModifier.length() > 0) {
-			name += "_" + nameModifier;
-		}
 		final String outputPath = pathHelper.getBuildTransformedFilesPath(build).append(name).toString();
+		LOGGER.debug("Started uploading transformed file: {}", name);
 		try {
 			buildFileHelper.putFile(file, outputPath);
 		} catch (NoSuchAlgorithmException | DecoderException e) {
 			throw new IOException("Problem creating checksum while uploading transformed file " + name, e);
 		}
+		LOGGER.debug("Finished uploading transformed file: {}", name);
 	}
 
 	@Override
