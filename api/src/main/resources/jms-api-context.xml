@@ -12,6 +12,11 @@
 
 	<bean class="org.springframework.jms.config.SimpleJmsListenerContainerFactory" id="jmsListenerContainerFactory">
 		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="messageConverter">
+			<bean class="org.springframework.jms.support.converter.MappingJackson2MessageConverter">
+				<property name="objectMapper" ref="objectMapper"/>
+			</bean>
+		</property>
 	</bean>
 
 	<bean id="jmsConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
