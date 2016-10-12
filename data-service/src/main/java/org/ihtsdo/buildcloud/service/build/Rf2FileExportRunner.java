@@ -230,13 +230,6 @@ public class Rf2FileExportRunner {
 		TableSchema tableSchema = null;
 		try {
 			tableSchema = rf2TableDAO.createTable(snapshotOutputFilename, snapshotInputStream, false);
-			// additional relationship fix 
-			//add existing additional relationships from the input inferred delta if there is any to the new delta
-			InputStream additionalRelationshipInputStream = buildDao.getTransformedFileAsInputStream(build, deltaFilename);
-			if (additionalRelationshipInputStream != null) {
-				LOGGER.info("Appending additional relationships to relationship delta file for build id:" + build.getId() );
-				rf2TableDAO.appendData(tableSchema, additionalRelationshipInputStream, false);
-			}
 		} catch (IOException | FileRecognitionException | DatabasePopulatorException | NumberFormatException | BadConfigurationException e) {
 			throw new ReleaseFileGenerationException("Failed to create table from " + snapshotOutputFilename, e);
 		}

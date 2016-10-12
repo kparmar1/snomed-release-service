@@ -361,13 +361,6 @@ public class BuildServiceImpl implements BuildService {
 			final Rf2FileExportRunner generator = new Rf2FileExportRunner(build, dao, uuidGenerator, fileProcessingFailureMaxRetry);
 			generator.generateReleaseFiles();
 			
-			//filter out additional relationships from the transformed delta
-			String inferedDelta = getInferredDeltaFromInput(inputFileSchemaMap);
-			if (inferedDelta != null) {
-				 String transformedDelta = inferedDelta.replace(RF2Constants.INPUT_FILE_PREFIX, RF2Constants.SCT2);
-				 transformedDelta = configuration.isBetaRelease() ? BuildConfiguration.BETA_PREFIX + transformedDelta : transformedDelta;
-				retrieveAdditionalRelationshipsFromTransformedDelta(build, transformedDelta);
-			}
 			if (configuration.isCreateInferredRelationships()) {
 				// Run classifier against concept and stated relationship snapshots to produce inferred relationship snapshot
 				final String transformedClassifierSnapshotResult = classifierService.generateInferredRelationshipSnapshot(build, inputFileSchemaMap);
