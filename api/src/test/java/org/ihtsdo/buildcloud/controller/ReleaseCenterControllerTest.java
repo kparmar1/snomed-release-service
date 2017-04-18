@@ -19,13 +19,13 @@ public class ReleaseCenterControllerTest extends AbstractControllerTest {
 				.andExpect(status().isOk())
 				.andDo(print())
 				.andExpect(content().contentType(APPLICATION_JSON_UTF8))
-				.andExpect(jsonPath("[0]$.id", is(centerId)))
-				.andExpect(jsonPath("[0]$.name", is(TestEntityGenerator.releaseCenterNames[0])))
-				.andExpect(jsonPath("[0]$.shortName", is(TestEntityGenerator.releaseCenterShortNames[0])))
-				.andExpect(jsonPath("[0]$.removed", is(false)))
-				.andExpect(jsonPath("[0]$.url", is(centerUrl)))
-				.andExpect(jsonPath("[0]$.products_url", is(centerUrl + "/products")))
-				.andExpect(jsonPath("[0]$.published_url", is(centerUrl + "/published")))
+				.andExpect(jsonPath("[0].id", is(centerId)))
+				.andExpect(jsonPath("[0].name", is(TestEntityGenerator.releaseCenterNames[0])))
+				.andExpect(jsonPath("[0].shortName", is(TestEntityGenerator.releaseCenterShortNames[0])))
+				.andExpect(jsonPath("[0].removed", is(false)))
+				.andExpect(jsonPath("[0].url", is(centerUrl)))
+				.andExpect(jsonPath("[0].products_url", is(centerUrl + "/products")))
+				.andExpect(jsonPath("[0].published_url", is(centerUrl + "/published")))
 		;
 	}
 
