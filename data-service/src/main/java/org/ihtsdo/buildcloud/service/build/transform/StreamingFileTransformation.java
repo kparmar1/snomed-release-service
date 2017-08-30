@@ -63,7 +63,7 @@ public class StreamingFileTransformation {
 			if (!columnValuesList.isEmpty()) {
 				processLinesInBuffer(columnValuesList, writer, fileName, lineNumber, report, stringBuilder);
 			}
-			LOGGER.info("Finish: Transform file {}.", fileName);
+			LOGGER.info("Finish: Transform file {}. Lines processed: {}", fileName, lineNumber);
 		} finally {
 			try {
 				writer.close();
