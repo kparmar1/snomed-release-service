@@ -3,12 +3,15 @@ set -e
 
 if [ -z "${environmentName}" ]
 then
-	echo "This script should be called from an environment specific file"
-	exit 0
+	echo "No environment specific file detected, running as local"
+else 
+	filename="${environmentName}-data-service.properties"
 fi 
 
-apiPort=8080
-filename="${environmentName}-data-service.properties"
+if [ -z "$apiPort" ]
+then
+	apiPort=8080
+fi
 
 function getProperty() {
 	property=$1	
@@ -20,7 +23,7 @@ do
 	case $opt in
 		d) 
 			debugMode=true
-			echo "Option set to start API in debug mode."
+			echo "Option set to start API in debug mode.  Listening on port 8000"
 			debugFlags="-Xdebug -Xnoagent -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000 -Djava.compiler=NONE" 
 		;;
 		s) 
@@ -41,37 +44,28 @@ do
 	esac
 done
 
-echo "Please enter a username under which to set up the id-gen tunnel: "
-read tunnelUserName
-
-propertiesFile="`pwd`/../data-service/target/classes/${filename}"
-if [ -f "$propertiesFile" ]; then
-
-	# Check if tunnel is already established before running
-	echo "Checking for existing tunnel and killing if found"
-	ps -ef | grep ssh | grep $(getProperty target_hostname) | awk '{print $2}' | xargs kill
+if [ -n "${filename}" ]
+then 
+	propertiesFile="`pwd`/../data-service/target/classes/${filename}"
+	if [ -f "$propertiesFile" ]; then
 	
-	command="ssh -L $(getProperty local_port):$(getProperty target_hostname):$(getProperty target_port) $(getProperty tunnel_proxy) -l ${tunnelUserName}"
-	echo "Running tunnelling command: ${command}"
-	${command} &
+		if [ -z "${skipMode}" ] 
+		then 
+			echo 'Building API webapp (skipping tests)..'
+			sleep 1
+			mvn -f ../pom.xml clean install -Dapple.awt.UIElement='true' -DskipTests=true
+			echo
+		fi
 	
-	# Give the user time to enter their password for this connection
-	sleep 20
-	
-	if [ -z "${skipMode}" ] 
-	then 
-		echo 'Building API webapp (skipping tests)..'
-		sleep 1
-		mvn -f ../pom.xml clean install -Dapple.awt.UIElement='true' -DskipTests=true
+		echo "Starting API webapp using $environmentName environment on port ${apiPort}."
 		echo
+		sleep 1
+		java ${debugFlags} -Xmx4g -DENV_NAME=$(whoami) -jar target/exec-api.jar -DdataServicePropertiesPath="file://${propertiesFile}"  -httpPort=${apiPort}
+	else
+		echo "You don't have access to the $environmentName environment (missing properties file? Was looking for ${propertiesFile})."
+		echo
+		exit 1
 	fi
-
-	echo "Starting API webapp using $environmentName environment on port ${apiPort}."
-	echo
-	sleep 1
-	java ${debugFlags} -Xmx4g -DENV_NAME=$(whoami) -jar target/exec-api.jar -DdataServicePropertiesPath="file://${propertiesFile}"  -httpPort=${apiPort}
-else
-	echo "You don't have access to the $environmentName environment (missing properties file?)."
-	echo
-	exit 1
+else 
+	java ${debugFlags} -Xmx4g -DENV_NAME=$(whoami) -jar target/exec-api.jar  -httpPort=${apiPort}
 fi
