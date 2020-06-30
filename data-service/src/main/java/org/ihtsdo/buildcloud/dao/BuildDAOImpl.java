@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.amazonaws.services.s3.model.*;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -58,14 +59,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.FileCopyUtils;
 
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.io.Files;
+
+import static java.lang.String.format;
 
 public class BuildDAOImpl implements BuildDAO {
 
@@ -255,7 +251,11 @@ public class BuildDAOImpl implements BuildDAO {
 		final String buildInputFilesPath = pathHelper.getBuildInputFilesPath(build).toString();
 		final List<String> filePaths = productInputFileDAO.listRelativeInputFilePaths(product);
 		for (final String filePath : filePaths) {
-			buildFileHelper.copyFile(productInputFilesPath + filePath, buildInputFilesPath + filePath);
+			try {
+				buildFileHelper.copyFile(productInputFilesPath + filePath, buildInputFilesPath + filePath);
+			} catch (AmazonS3Exception e) {
+				throw new IOException(format("Failed to copy file from S3 to create a new build for {}. File missing is {}.", product.getName(), filePath), e);
+			}
 		}
 
 		// Copy manifest file
